@@ -12,5 +12,7 @@ app.get("/",(req,res)=>{
    })
 })
 const authRoutes=require('./routes/authRoutes')
+const documentRoutes = require("./routes/documentRoutes");
+app.use("/api/documents", documentRoutes);
 app.use("/api/auth",authRoutes);
 module.exports=app;
