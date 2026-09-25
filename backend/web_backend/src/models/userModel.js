@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
+      minlength: 12,
+      maxlength: 12,
     },
 
     name: {
@@ -21,6 +23,14 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       lowercase: true,
+    },
+
+    phoneNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      match: [/^[6-9]\d{9}$/, "Please enter a valid 10-digit phone number"],
     },
 
     role: {

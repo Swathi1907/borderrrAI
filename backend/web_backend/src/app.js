@@ -11,8 +11,10 @@ app.get("/",(req,res)=>{
     message: "Hello World",
    })
 })
+const sumsubRoutes= require('./routes/sumsubRoutes')
 const authRoutes=require('./routes/authRoutes')
 const documentRoutes = require("./routes/documentRoutes");
+app.use("/api/documents/sumsub",sumsubRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/auth",authRoutes);
 module.exports=app;
