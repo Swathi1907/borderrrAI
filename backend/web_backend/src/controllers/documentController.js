@@ -1,96 +1,214 @@
 const crypto = require("crypto");
+
 const Document = require("../models/documentModel");
-const { sendDocumentToML } = require("../services/mlService");
+const Verification = require("../models/verificationModel");
+
+const {
+  sendDocumentToML,
+} = require("../services/mlService");
+
 
 const uploadDocument = async (req, res) => {
+
   let document = null;
+  let verification = null;
 
   try {
-    // 1. Get all three uploaded images
-    const passportFile = req.files?.passport?.[0];
-    const visaFile = req.files?.visa?.[0];
-    const liveImageFile = req.files?.liveImage?.[0];
 
-    // 2. Check all three files
-    if (!passportFile || !visaFile || !liveImageFile) {
+    const passportFile =
+      req.files?.passport?.[0];
+
+    const visaFile =
+      req.files?.visa?.[0];
+
+    const liveImageFile =
+      req.files?.liveImage?.[0];
+
+
+  
+    if (
+      !passportFile ||
+      !visaFile ||
+      !liveImageFile
+    ) {
+
       return res.status(400).json({
         success: false,
-        message: "Passport, visa, and live image are required",
+        message:
+          "Passport, visa, and live image are required",
       });
+
     }
 
-    // 3. Generate IDs
-    const documentId = `DOC-${crypto.randomUUID()}`;
-    const requestId = `REQ-${crypto.randomUUID()}`;
+    const documentId =
+      `DOC-${crypto.randomUUID()}`;
 
-    // 4. Create MongoDB record
+    const requestId =
+      `REQ-${crypto.randomUUID()}`;
+
+    const verificationId =
+      `VER-${crypto.randomUUID()}`;
+
+
+    
     document = await Document.create({
-      documentId,
-      requestId,
-
-      employeeId: req.user.employeeId,
-
-      originalFileName: passportFile.originalname,
-      mimeType: passportFile.mimetype,
-
-      status: "PROCESSING",
-    });
-
-    console.log("Document created:", documentId);
-    console.log("Request ID:", requestId);
-    console.log("Sending passport + visa + live image to ML service...");
-
-    // 5. Send all three images to FastAPI
-    const mlResult = await sendDocumentToML({
-      passportBuffer: passportFile.buffer,
-      visaBuffer: visaFile.buffer,
-      liveImageBuffer: liveImageFile.buffer,
 
       documentId,
+
       requestId,
-      docType: 3,
+
+      employeeId:
+        req.user.employeeId,
+
+      originalFileName:
+        passportFile.originalname,
+
+      mimeType:
+        passportFile.mimetype,
+
+      status:
+        "PROCESSING",
     });
 
-    console.log("ML service response received:");
+
+    verification =
+      await Verification.create({
+
+        verificationId,
+
+        employeeId:
+          req.user.employeeId,
+
+        status:
+          "PROCESSING",
+
+        mlDocumentId:
+          documentId,
+
+        mlRequestId:
+          requestId,
+      });
+
+
+    console.log(
+      "Verification created:",
+      verificationId
+    );
+
+
+    console.log(
+      "Sending passport + visa + live image to ML..."
+    );
+
+
+    const mlResult =
+      await sendDocumentToML({
+
+        passportBuffer:
+          passportFile.buffer,
+
+        visaBuffer:
+          visaFile.buffer,
+
+        liveImageBuffer:
+          liveImageFile.buffer,
+
+        documentId,
+
+        requestId,
+
+        docType: 3,
+      });
+
+
+    console.log(
+      "ML service response received:"
+    );
+
     console.log(mlResult);
 
-    // 6. Save ML result
-    document.mlResult = mlResult;
-    document.status = "COMPLETED";
+   document.mlResult =
+      mlResult;
+
+    document.status =
+      "COMPLETED";
 
     await document.save();
 
-    // 7. Return result
+
+    verification.mlResult =
+      mlResult;
+
+    verification.status =
+      "ML_COMPLETED";
+
+    await verification.save();
+
+
+ 
     return res.status(200).json({
+
       success: true,
-      message: "Documents processed successfully",
 
-      documentId: document.documentId,
-      requestId: document.requestId,
+      message:
+        "Passport, visa and live image processed successfully",
 
-      passportFileName: passportFile.originalname,
-      visaFileName: visaFile.originalname,
-      liveImageFileName: liveImageFile.originalname,
+      verificationId,
 
-      status: document.status,
+      documentId,
 
-      mlResult: document.mlResult,
+      requestId,
+
+      status:
+        verification.status,
+
+      mlResult,
+
     });
-  } catch (error) {
-    console.error("Document processing error:", error);
 
-    // If MongoDB record was already created
+
+  } catch (error) {
+
+    console.error(
+      "Document processing error:",
+      error
+    );
+
+
+    // Mark document as failed
     if (document) {
-      document.status = "FAILED";
+
+      document.status =
+        "FAILED";
+
       await document.save();
+
     }
 
+
+    // Mark verification as failed
+    if (verification) {
+
+      verification.status =
+        "FAILED";
+
+      await verification.save();
+
+    }
+
+
     return res.status(500).json({
+
       success: false,
-      message: "Document processing failed",
+
+      message:
+        "Document processing failed",
+
     });
+
   }
 };
+
 
 module.exports = {
   uploadDocument,

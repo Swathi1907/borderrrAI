@@ -1,5 +1,7 @@
 const crypto = require("crypto");
 
+const Verification = require("../models/verificationModel");
+
 const {
   createApplicant,
   uploadDocumentToSumsub,
@@ -8,13 +10,17 @@ const {
 
 const uploadSumsubDocument = async (req, res) => {
 
+  let verification = null;
+
   try {
 
     const frontFile =
-      req.files?.front?.[0];
+      req.files?.idFront?.[0];
 
     const backFile =
-      req.files?.back?.[0];
+      req.files?.idBack?.[0];
+
+
 
     if (!frontFile) {
 
@@ -30,7 +36,37 @@ const uploadSumsubDocument = async (req, res) => {
     const {
       documentType,
       country,
+      verificationId,
     } = req.body;
+
+    if (!verificationId) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "verificationId is required",
+      });
+
+    }
+
+
+    verification =
+      await Verification.findOne({
+        verificationId,
+        employeeId:
+          req.user.employeeId,
+      });
+
+
+    if (!verification) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "Verification record not found",
+      });
+
+    }
 
 
     const allowedTypes = [
@@ -39,11 +75,12 @@ const uploadSumsubDocument = async (req, res) => {
     ];
 
 
-    if (!allowedTypes.includes(documentType)) {
+    if (
+      !allowedTypes.includes(documentType)
+    ) {
 
       return res.status(400).json({
         success: false,
-
         message:
           "documentType must be NATIONAL_ID or DRIVING_LICENSE",
       });
@@ -51,6 +88,7 @@ const uploadSumsubDocument = async (req, res) => {
     }
 
 
+   
     if (
       !country ||
       country.length !== 3
@@ -58,12 +96,12 @@ const uploadSumsubDocument = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-
         message:
           "3-letter ISO country code is required",
       });
 
     }
+
 
     const requestId =
       `REQ-${crypto.randomUUID()}`;
@@ -77,12 +115,16 @@ const uploadSumsubDocument = async (req, res) => {
     );
 
     console.log(
+      "Verification ID:",
+      verificationId
+    );
+
+    console.log(
       "External User ID:",
       externalUserId
     );
 
 
-  
     const applicant =
       await createApplicant({
         externalUserId,
@@ -95,6 +137,7 @@ const uploadSumsubDocument = async (req, res) => {
     );
 
 
+    
     let sumsubDocumentType;
 
 
@@ -200,14 +243,10 @@ const uploadSumsubDocument = async (req, res) => {
 
     }
 
-    return res.status(200).json({
+
+    const sumsubResult = {
 
       success: true,
-
-      message:
-        backFile
-          ? "Front and back document images uploaded to Sumsub successfully"
-          : "Front document image uploaded to Sumsub successfully",
 
       requestId,
 
@@ -233,6 +272,46 @@ const uploadSumsubDocument = async (req, res) => {
 
       backResult,
 
+    };
+
+    verification.sumsubResult =
+      sumsubResult;
+
+    verification.sumsubApplicantId =
+      applicant.id;
+
+    verification.sumsubExternalUserId =
+      externalUserId;
+
+
+   
+    verification.status =
+      "COMPLETED";
+
+
+    await verification.save();
+
+
+    console.log(
+      "Verification updated successfully:",
+      verificationId
+    );
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message:
+        "Sumsub documents uploaded and verification record updated successfully",
+
+      verificationId,
+
+      status:
+        verification.status,
+
+      sumsubResult,
+
     });
 
 
@@ -242,11 +321,20 @@ const uploadSumsubDocument = async (req, res) => {
       "Sumsub document error:"
     );
 
-
     console.error(
       error.response?.data ||
       error.message
     );
+
+
+    if (verification) {
+
+      verification.status =
+        "FAILED";
+
+      await verification.save();
+
+    }
 
 
     return res.status(500).json({
