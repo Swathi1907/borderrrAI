@@ -45,10 +45,19 @@ router.post(
 );
 
 router.post(
-  "/sumsub",
+  "/upload1",
   authMiddleware,
 
-  upload.single("document"),
+ upload.fields([
+    {
+      name: "idFront",
+      maxCount: 1,
+    },
+    {
+      name: "idBack",
+      maxCount: 1,
+    },
+  ]),
 
   uploadSumsubDocument
 );
