@@ -50,11 +50,11 @@ router.post(
 
  upload.fields([
     {
-      name: "front",
+      name: "idFront",
       maxCount: 1,
     },
     {
-      name: "back",
+      name: "idBack",
       maxCount: 1,
     },
   ]),
