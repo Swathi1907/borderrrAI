@@ -7,6 +7,7 @@ const APP_TOKEN = process.env.SUMSUB_APP_TOKEN;
 const SECRET_KEY = process.env.SUMSUB_SECRET_KEY;
 const LEVEL_NAME = process.env.SUMSUB_LEVEL_NAME;
 
+
 const generateSignature = ({
   timestamp,
   method,
@@ -44,37 +45,48 @@ const createApplicant = async ({
     externalUserId,
   };
 
-  const body = JSON.stringify(bodyObject);
+  const body =
+    JSON.stringify(bodyObject);
 
   const timestamp =
     Math.floor(Date.now() / 1000).toString();
 
-  const signature = generateSignature({
-    timestamp,
-    method: "POST",
-    path,
-    body,
-  });
+  const signature =
+    generateSignature({
+      timestamp,
+      method: "POST",
+      path,
+      body,
+    });
 
-  const response = await axios.post(
-    `${BASE_URL}${path}`,
-    body,
-    {
-      headers: {
-        "Content-Type": "application/json",
 
-        "X-App-Token": APP_TOKEN,
-        "X-App-Access-Sig": signature,
-        "X-App-Access-Ts": timestamp,
-      },
+  const response =
+    await axios.post(
+      `${BASE_URL}${path}`,
+      body,
+      {
+        headers: {
 
-      timeout: 30000,
-    }
-  );
+          "Content-Type":
+            "application/json",
+
+          "X-App-Token":
+            APP_TOKEN,
+
+          "X-App-Access-Sig":
+            signature,
+
+          "X-App-Access-Ts":
+            timestamp,
+        },
+
+        timeout: 30000,
+      }
+    );
+
 
   return response.data;
 };
-
 
 
 const uploadDocumentToSumsub = async ({
@@ -84,17 +96,39 @@ const uploadDocumentToSumsub = async ({
   mimeType,
   documentType,
   country,
+
+  
+  side,
 }) => {
 
   const path =
     `/resources/applicants/${applicantId}/info/idDoc`;
 
-  const form = new FormData();
+  const form =
+    new FormData();
 
-  const metadata = JSON.stringify({
-    idDocType: documentType,
-    country,
-  });
+
+  const metadata =
+    JSON.stringify({
+
+    
+      idDocType:
+        documentType,
+
+    
+      idDocSubType:
+        side,
+
+   
+      country,
+    });
+
+
+  console.log(
+    "SUMSUB METADATA:",
+    metadata
+  );
+
 
   form.append(
     "metadata",
@@ -105,52 +139,88 @@ const uploadDocumentToSumsub = async ({
     "content",
     buffer,
     {
-      filename: fileName,
-      contentType: mimeType,
+      filename:
+        fileName,
+
+      contentType:
+        mimeType,
     }
   );
 
-  const body = form.getBuffer();
+  const body =
+    form.getBuffer();
+
 
   const timestamp =
-    Math.floor(Date.now() / 1000).toString();
+    Math.floor(
+      Date.now() / 1000
+    ).toString();
 
-  const signature = generateSignature({
-    timestamp,
-    method: "POST",
-    path,
-    body,
-  });
 
-  const response = await axios.post(
-    `${BASE_URL}${path}`,
-    body,
-    {
-      headers: {
-        ...form.getHeaders(),
+  const signature =
+    generateSignature({
 
-        "X-App-Token": APP_TOKEN,
-        "X-App-Access-Sig": signature,
-        "X-App-Access-Ts": timestamp,
+      timestamp,
 
-        "X-Return-Doc-Warnings": "true",
-      },
+      method:
+        "POST",
 
-      maxContentLength:
-        50 * 1024 * 1024,
+      path,
 
-      maxBodyLength:
-        50 * 1024 * 1024,
+      body,
+    });
 
-      timeout: 60000,
-    }
-  );
+
+  const response =
+    await axios.post(
+
+      `${BASE_URL}${path}`,
+
+      body,
+
+      {
+        headers: {
+
+          ...form.getHeaders(),
+
+          "X-App-Token":
+            APP_TOKEN,
+
+          "X-App-Access-Sig":
+            signature,
+
+          "X-App-Access-Ts":
+            timestamp,
+
+          "X-Return-Doc-Warnings":
+            "true",
+        },
+
+
+        maxContentLength:
+          50 * 1024 * 1024,
+
+
+        maxBodyLength:
+          50 * 1024 * 1024,
+
+
+        timeout:
+          60000,
+      }
+    );
+
 
   return response.data;
 };
 
 
+
+
 module.exports = {
+
   createApplicant,
+
   uploadDocumentToSumsub,
+
 };
