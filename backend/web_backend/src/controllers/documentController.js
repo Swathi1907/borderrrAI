@@ -162,8 +162,7 @@ const uploadDocument = async (req, res) => {
       status:
         verification.status,
 
-      mlResult,
-
+      mlResult: document.mlResult,
     });
 
 

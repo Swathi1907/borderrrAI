@@ -15,6 +15,7 @@ const flights = [
 
 const EMPLOYEE_ID_LENGTH = 12;
 const OTP_LENGTH = 6;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8443';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -37,14 +38,14 @@ export default function Landing() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/request-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/request-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
         body: JSON.stringify({
-          employee_id: officerId,
+          employeeId: officerId,
         }),
       });
 
@@ -73,14 +74,14 @@ export default function Landing() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/verify-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
         body: JSON.stringify({
-          employee_id: officerId,
+          employeeId: officerId,
           otp,
         }),
       });

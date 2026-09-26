@@ -9,6 +9,7 @@ const {
 
 const {
   uploadSumsubDocument,
+  uploadSumsubDocumentPair,
 } = require("../controllers/sumsubController");
 
 const router = express.Router();
@@ -60,6 +61,18 @@ router.post(
   ]),
 
   uploadSumsubDocument
+);
+
+router.post(
+  "/upload/1",
+  authMiddleware,
+  upload.fields([
+    { name: "idFront", maxCount: 1 },
+    { name: "idBack", maxCount: 1 },
+    { name: "front", maxCount: 1 },
+    { name: "back", maxCount: 1 },
+  ]),
+  uploadSumsubDocumentPair
 );
 
 

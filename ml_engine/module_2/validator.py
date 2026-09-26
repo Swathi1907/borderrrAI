@@ -163,11 +163,18 @@ def validate_faces(true_embed , pass_embed, threshold = 0.65):
         similarity = float(np.dot(true_embed , pass_embed))
     except Exception as e:
         return {
-            "status" : False
+            "status" : False,
+            "face_check" : False,
+            "face_similarity" : None,
+            "face_confidence" : 0.0,
         }
     
+    confidence = max(0.0, min(100.0, similarity * 100.0))
+
     return {
         "status" : True,
-        "face_check" : (similarity > threshold)
+        "face_check" : (similarity > threshold),
+        "face_similarity" : similarity,
+        "face_confidence" : confidence,
     }
         

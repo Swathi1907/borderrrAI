@@ -72,10 +72,28 @@ const sendDocumentToML = async ({
       }
     );
 
-    console.log("ML response:");
-    console.log(response.data);
+    const scores = {
+      mrz_confidence: null,
+      face_confidence: null,
+      face_similarity: null,
+      tampering_score: null,
+      tampered: null,
+      photo_spliced: null,
+      ocr_confidence: null,
+      security_confidence: null,
+      risk_score: null,
+      ...(response.data?.scores || {}),
+    };
 
-    return response.data;
+    const result = {
+      ...response.data,
+      scores,
+    };
+
+    console.log("ML response:");
+    console.log(result);
+
+    return result;
   } catch (error) {
     console.error("ML STATUS:", error.response?.status);
 

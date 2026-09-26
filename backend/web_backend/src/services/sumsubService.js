@@ -96,9 +96,6 @@ const uploadDocumentToSumsub = async ({
   mimeType,
   documentType,
   country,
-
-  
-  side,
 }) => {
 
   const path =
@@ -108,20 +105,10 @@ const uploadDocumentToSumsub = async ({
     new FormData();
 
 
-  const metadata =
-    JSON.stringify({
-
-    
-      idDocType:
-        documentType,
-
-    
-      idDocSubType:
-        side,
-
-   
-      country,
-    });
+  const metadata = JSON.stringify({
+    idDocType: documentType,
+    country,
+  });
 
 
   console.log(

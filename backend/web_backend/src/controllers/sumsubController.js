@@ -7,7 +7,6 @@ const {
   uploadDocumentToSumsub,
 } = require("../services/sumsubService");
 
-
 const uploadSumsubDocument = async (req, res) => {
 
   let verification = null;
@@ -136,41 +135,20 @@ const uploadSumsubDocument = async (req, res) => {
       applicant.id
     );
 
-
-    
     let sumsubDocumentType;
 
-
-    if (
-      documentType === "NATIONAL_ID"
-    ) {
-
-      sumsubDocumentType =
-        "ID_CARD";
-
+    if (documentType === "NATIONAL_ID") {
+      sumsubDocumentType = "ID_CARD";
     }
 
-
-    if (
-      documentType === "DRIVING_LICENSE"
-    ) {
-
-      sumsubDocumentType =
-        "DRIVERS";
-
+    if (documentType === "DRIVING_LICENSE") {
+      sumsubDocumentType = "DRIVERS";
     }
 
+   
+    console.log("Uploading document to Sumsub...");
 
-    const normalizedCountry =
-      country.toUpperCase();
-
-
-    console.log(
-      "Uploading FRONT side..."
-    );
-
-
-    const frontResult =
+    const sumsubResult =
       await uploadDocumentToSumsub({
 
         applicantId:
@@ -354,7 +332,7 @@ const uploadSumsubDocument = async (req, res) => {
 
 };
 
-
 module.exports = {
   uploadSumsubDocument,
+  uploadSumsubDocumentPair,
 };

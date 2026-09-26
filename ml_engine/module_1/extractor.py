@@ -24,6 +24,28 @@ def extractMRZ(image) -> str:
     
     return x
 
+def extractMRZWithConfidence(image) -> tuple[str, float]:
+    """Extract MRZ text and return the mean positive Tesseract word confidence."""
+    text = pytesseract.image_to_string(image, config=config_mrz)
+    data = pytesseract.image_to_data(
+        image,
+        config=config_mrz,
+        output_type=pytesseract.Output.DICT,
+    )
+
+    confidences = []
+    for value, token in zip(data["conf"], data["text"]):
+        if token.strip():
+            try:
+                confidence = float(value)
+            except (TypeError, ValueError):
+                continue
+            if confidence >= 0:
+                confidences.append(confidence)
+
+    mean_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+    return text, round(mean_confidence, 2)
+
 def extractImageEmbed(image):
     
     image = cv2.cvtColor(image , cv2.COLOR_BGR2RGB)

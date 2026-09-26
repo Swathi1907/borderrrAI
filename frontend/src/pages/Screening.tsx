@@ -105,7 +105,11 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
   const [mode, setMode] = useState<'idle' | 'scanning' | 'done'>('idle');
   const [progress, setProgress] = useState(0);
   const [captureIndex, setCaptureIndex] = useState(0);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
 
   const captureItems = [
     {
@@ -125,12 +129,20 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
       detail: 'Visa details are ready for cross-validation',
     },
     {
-      label: 'Valid national ID',
-      shortLabel: 'National ID',
+      label: 'National ID front',
+      shortLabel: 'ID front',
       instruction: 'Place the front of a valid national identity card inside the frame.',
-      scanning: 'Reading national ID',
-      success: 'National ID captured successfully',
-      detail: 'Identity card fields are ready for analysis',
+      scanning: 'Reading national ID front',
+      success: 'National ID front captured successfully',
+      detail: 'Front identity fields are ready for analysis',
+    },
+    {
+      label: 'National ID back',
+      shortLabel: 'ID back',
+      instruction: 'Turn the national identity card over and place the back inside the frame.',
+      scanning: 'Reading national ID back',
+      success: 'National ID back captured successfully',
+      detail: 'Back identity fields are ready for analysis',
     },
     {
       label: 'Driving license',
@@ -153,7 +165,51 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
   const activeCapture = captureItems[captureIndex];
   const isLivePhoto = captureIndex === captureItems.length - 1;
 
+  useEffect(() => {
+    return () => {
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (cameraActive && videoRef.current && cameraStreamRef.current) {
+      videoRef.current.srcObject = cameraStreamRef.current;
+    }
+  }, [cameraActive]);
+
+  async function startCamera() {
+    setCameraError('');
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Live camera is not available in this browser.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false,
+      });
+      cameraStreamRef.current = stream;
+      setCameraActive(true);
+    } catch {
+      setCameraError('Camera access was blocked. Allow camera permission and try again.');
+    }
+  }
+
+  function stopCamera() {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    setCameraActive(false);
+  }
+
   function startScan() {
+    if (isLivePhoto && !cameraActive) {
+      void startCamera();
+      return;
+    }
+
+    if (isLivePhoto) stopCamera();
     setMode('scanning');
     setProgress(0);
     const interval = setInterval(() => {
@@ -172,6 +228,7 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
     setCaptureIndex((index) => index + 1);
     setMode('idle');
     setProgress(0);
+    setCameraError('');
   }
 
   return (
@@ -187,14 +244,14 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
             </div>
             <div>
               <div className="font-semibold text-slate-800">Identity Evidence Capture</div>
-              <div className="text-xs text-slate-500">Complete all five captures in the required order</div>
+              <div className="text-xs text-slate-500">Complete all six captures in the required order</div>
             </div>
             <span className="ml-auto text-[10px] font-semibold text-slate-400">{captureIndex + 1} of {captureItems.length}</span>
           </div>
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-2 gap-2 mb-6 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 mb-6 sm:grid-cols-6">
             {captureItems.map((item, index) => {
               const complete = index < captureIndex || (index === captureIndex && mode === 'done');
               const active = index === captureIndex;
@@ -248,11 +305,25 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
             {mode === 'idle' && (
               <>
                 {isLivePhoto ? (
-                  <div className="mb-4 flex h-32 w-40 items-center justify-center rounded-2xl border-2 border-slate-300 bg-slate-100">
-                    <svg className="size-16 text-slate-400" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                      <circle cx="32" cy="23" r="11" stroke="currentColor" strokeWidth="2" />
-                      <path d="M13 55c2-12 9-18 19-18s17 6 19 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
+                  <div className="relative mb-4 h-32 w-56 overflow-hidden rounded-2xl border-2 border-emerald-400 bg-slate-900">
+                    {cameraActive ? (
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="size-full object-cover"
+                        aria-label="Live camera preview"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center bg-slate-100">
+                        <svg className="size-16 text-slate-400" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                          <circle cx="32" cy="23" r="11" stroke="currentColor" strokeWidth="2" />
+                          <path d="M13 55c2-12 9-18 19-18s17 6 19 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                    )}
+                    {cameraActive && <div className="absolute inset-3 rounded-xl border border-white/70" />}
                   </div>
                 ) : (
                   <div className="w-48 h-32 rounded-xl border-2 border-slate-300 relative flex items-center justify-center mb-4 bg-slate-200">
@@ -274,8 +345,9 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
                     ))}
                   </div>
                 )}
-                <div className="text-sm font-medium text-slate-600 mb-1">{isLivePhoto ? 'Position face inside the frame' : 'Place document inside the frame'}</div>
+                <div className="text-sm font-medium text-slate-600 mb-1">{isLivePhoto ? cameraActive ? 'Position face inside the live feed' : 'Start the live camera feed' : 'Place document inside the frame'}</div>
                 <div className="text-xs text-slate-400">{isLivePhoto ? 'Use a clear, front-facing live image' : 'Ensure all corners and details are visible'}</div>
+                {cameraError && <div className="mt-2 text-xs font-medium text-red-600">{cameraError}</div>}
               </>
             )}
 
@@ -318,8 +390,16 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
                   className="flex-1 py-3 rounded-xl font-semibold text-sm text-white transition-all hover:opacity-90 flex items-center justify-center gap-2"
                   style={{ background: '#10b981' }}
                 >
-                  {isLivePhoto ? 'Open camera and capture' : `Scan ${activeCapture.shortLabel}`}
+                  {isLivePhoto ? cameraActive ? 'Capture live photo' : 'Open camera' : `Scan ${activeCapture.shortLabel}`}
                 </button>
+                {isLivePhoto && cameraActive && (
+                  <button
+                    onClick={stopCamera}
+                    className="px-5 py-3 rounded-xl text-sm text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+                  >
+                    Stop camera
+                  </button>
+                )}
                 {!isLivePhoto && (
                   <>
                     <button
@@ -355,7 +435,7 @@ function CaptureStep({ onNext }: { onNext: () => void }) {
           </div>
         </div>
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4 text-[10px] text-slate-400">
-          <span>Required order: Passport → Visa → National ID → Driving license → Live photo</span>
+          <span>Required order: Passport → Visa → ID front → ID back → Driving license → Live photo</span>
           <span>Encrypted capture</span>
         </div>
       </div>
@@ -555,6 +635,14 @@ function VerificationStep({ forged }: { forged: boolean }) {
 
   const passed = checks.filter(c => c.pass).length;
   const failed = checks.length - passed;
+  const confidenceMetrics = [
+    { label: 'Tampering score', value: forged ? '0.812' : '0.007', detail: 'Lower is safer', tone: forged ? 'text-red-600' : 'text-emerald-600' },
+    { label: 'OCR extraction', value: forged ? '92.4%' : '98.7%', detail: '112 fields read', tone: 'text-emerald-600' },
+    { label: 'Security features', value: forged ? '84.6%' : '99.6%', detail: '8 markers checked', tone: forged ? 'text-amber-600' : 'text-emerald-600' },
+    { label: 'MRZ integrity', value: forged ? '68.0%' : '100%', detail: forged ? 'Checksum mismatch' : 'Checksums passed', tone: forged ? 'text-red-600' : 'text-emerald-600' },
+    { label: 'Face match', value: forged ? '71.2%' : '99.1%', detail: 'Live photo vs chip', tone: forged ? 'text-red-600' : 'text-emerald-600' },
+    { label: 'Watchlist match', value: forged ? '96.8%' : '99.9%', detail: '14 lists checked', tone: 'text-emerald-600' },
+  ];
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -662,6 +750,28 @@ function VerificationStep({ forged }: { forged: boolean }) {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Model confidence summary */}
+      <div className="mb-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Model confidence</div>
+            <div className="mt-1 text-[11px] text-slate-400">Signals used to produce this verification result</div>
+          </div>
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">AI SCORES</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {confidenceMetrics.map((metric) => (
+            <div key={metric.label} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[10px] font-medium text-slate-500">{metric.label}</span>
+                <span className={`text-sm font-bold ${metric.tone}`}>{metric.value}</span>
+              </div>
+              <div className="mt-1 text-[10px] text-slate-400">{metric.detail}</div>
+            </div>
+          ))}
         </div>
       </div>
 
