@@ -179,7 +179,7 @@ def detect_document_contour(
     # Primary sort: lowest aspect ratio deviation; Secondary: highest area
     valid_candidates.sort(key=lambda x: (x["ar_diff"], -x["center_y"],-x["area"]))
     
-    return gray , valid_candidates[0]["contour"]
+    return gray , valid_candidates[0]["contour"] 
 
 def preprocess_mrz(img_path: str) -> str:
     # Load grayscale directly
