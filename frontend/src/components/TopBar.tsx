@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import indiaEmblem from '../imports/image.png';
 
 interface Props {
@@ -5,13 +6,35 @@ interface Props {
 }
 
 export function IndiaEmblem() {
+  const [emblemLoadFailed, setEmblemLoadFailed] = useState(false);
+
   return (
     <div className="flex h-16 w-12 shrink-0 items-center justify-center rounded-lg bg-white p-0.5 shadow-sm">
-      <img
-        src={indiaEmblem}
-        alt="National Emblem of India"
-        className="max-h-full max-w-full object-contain"
-      />
+      {emblemLoadFailed ? (
+        <svg className="size-10" viewBox="0 0 48 48" role="img" aria-label="Ashoka Chakra">
+          <circle cx="24" cy="24" r="18" fill="none" stroke="#1e40af" strokeWidth="1.5" />
+          {Array.from({ length: 24 }, (_, index) => (
+            <line
+              key={index}
+              x1="24"
+              y1="7"
+              x2="24"
+              y2="22"
+              transform={`rotate(${index * 15} 24 24)`}
+              stroke="#1e40af"
+              strokeWidth="0.8"
+            />
+          ))}
+          <circle cx="24" cy="24" r="2" fill="#1e40af" />
+        </svg>
+      ) : (
+        <img
+          src={indiaEmblem}
+          alt="National Emblem of India"
+          className="max-h-full max-w-full object-contain"
+          onError={() => setEmblemLoadFailed(true)}
+        />
+      )}
     </div>
   );
 }
